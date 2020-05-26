@@ -1,165 +1,124 @@
-var pToN = [] // Port -> nom
-var clients = [] // Nom -> données
-
-var responses = []
-
-var logined = []
-var vanishs = []
-
-for(i=0;i<10;i++)console.log("\n")
-
-function nameorport(s){
-	if(pToN[s.remotePort])return pToN[s.remotePort]
-	else return "port:"+s.remotePort
-
+function tconvert(x){
+	if(x.toString().length==1)return "0"+x
+	else return x
+}
+function gettime(x){
+	let d = new Date()
+	return `[${tconvert(d.getHours())}:${tconvert(d.getMinutes())}:${tconvert(d.getSeconds())}]`
+}
+function logger(msg, socket, content){
+	console.log(gettime()+" "+msg)
+	if(socket){
+		console.log("Client : "+nameorport(socket.remotePort)+". Contenu : "+content)
+	}	
 }
 
-function getId(){return Math.ceil(Math.random()*900)+99}
+var sockData = []
+
+function softGetByName(name){
+	let a = getByName(name)
+	if(a)return a
+	else{
+		a = new Object()
+		a.write = ()=>{}
+		return a
+	}
+}
+
+function getByName(name){
+	for(let i in sockData){
+		if(sockData[i].name==name)return sockData[i]
+	}
+}
+
+function nameorport(s){
+	if(sockData[s])return sockData[s].name
+	else return "port:"+s
+}
+
 
 require('net').createServer(function (socket) {
 	
-	console.log("nouveau client sur le port "+socket.remotePort)
+	logger("New client on port "+socket.remotePort)
 
-	socket.on('data', async function (data) {
+	socket.on('data', function (data) {
 		let m = data.toString()
-		if(m.charCodeAt(m.length-2) == 13)m = m.substring(0, m.length-2) // AU CAS OU , NORMALEMENT INUTILE
-		else m=m.substring(0, m.length-1) // LUI IL EST UTILE
-		let s = m.substring(0,3)
-		if(!Number(s)||m.length<4){
-			console.log("Paquet invalide recu de "+pToN[socket.remotePort])
-			console.log("Paquet : "+m)
-			return
+		if(m.charCodeAt(m.length-2) == 13)m = m.substring(0, m.length-2)
+		else if(m.charCodeAt(m.length-1) == 10) m=m.substring(0, m.length-1)
+		for(let i of m.split("\n")){
+			logger("Paquet de "+nameorport(socket.remotePort)+" : "+i)
+			socket.emit('line', i)
 		}
+	
+	})
 
-		if(responses[s]){ // requête réponse demandée par le socket
-			responses[s](m) // on envoi aussi l'ID dans la fonction !!
-			delete responses[s]
-		}else{
-			let arg = m.substring(3).split(" ")
-			
-			let ret = handleRequest(socket, s, arg)
-			if(typeof ret != 'undefined'){
-				if(ret=="_x")console.log("Le client "+nameorport(socket)+" a envoyé un paquet inexistant.\nPaquet : "+m)
-				else socket.write(s+ret+"\n")
+	socket.on('line', function (m) {
+		let args = m.split(" ")
+		
+		let type = args.shift()
+		if(type=="log"){
+			let t = getByName(args[0])
+			if(t){
+				logger("**Connection dupliquée pour "+args[0]+" !** L'ancienne connection à été terminée")
+				delete sockData[t.remotePort]
+				t.end()
+			}
+			logger("Client sur le port "+socket.remotePort+" connecté en tant que "+args[0])
+			socket.name = args[0]
+			sockData[socket.remotePort] = socket
+		}else if(socket.name==undefined)logger("Paquet recu pour un serveur non authentifié !", socket, m)
+		else{
+			let t = getByName(type)
+			if(t)t.write(args.join(' ')+"\n")
+			else{
+				switch(type){
+					case "onlines":{
+						softGetByName("Hub").write("onlines "+socket.name+" "+args[0]+"\n")
+						softGetByName("EBH").write("onlines "+socket.name+" "+args[0]+"\n")
+						return
+					}
+					case "players":{
+						softGetByName("Hub").write("players "+args.join(" ")+"\n")
+						softGetByName("EBH").write("players "+args.join(" ")+"\n")
+						// TODO PASSER AU BOT DISCORD ET AU WEBSOCKET DEDIE
+						return
+					}
+					case "broadcast":{
+						return broadcast(args.join(' '), socket.remotePort)
+					}
+					default:{
+						logger("Packet non reconnu", socket, m)
+					}
+				}
 			}
 		}
 	})
 	
 
 	socket.on('end', function (){
-		console.log("Client "+nameorport(socket)+" déconnecté")
-		disconnect(socket)
+		logger("Client "+nameorport(socket.remotePort)+" déconnecté")
+		delete sockData[socket.remotePort]
 	})
 	
 
 	socket.on('error', function (e) {
-		console.log("Client "+nameorport(socket)+" déconnecté par erreur : "+e.message)
-		disconnect(socket)
+		logger("Client "+nameorport(socket.remotePort)+" déconnecté avec erreur : "+e.message)
+		delete sockData[socket.remotePort]
 	})
 
 
 
 }).listen(23461, "127.0.0.1", () => {
-	console.log('Serveur lancé')
+	logger('Serveur lancé')
 })
 
 
-
-
-function disconnect(socket){
-	if(pToN[socket.remotePort] == "BungeeCord")logined = []
-	delete clients[pToN[socket.remotePort]]
-	delete pToN[socket.remotePort]
-}
-
-
-
-
-// async function getData(a){
-// 	let client = a.shift()
-// 	a = a.join(' ')
-// 	clsocket = clients[client]
-// 	return new Promise(async resolve => {
-// 		let i = getId()
-// 		clsocket.write(i+a+"\n")
-// 		var fonction = (data) => {
-// 			let m = data.toString()
-// 			if(m.charCodeAt(m.length-2) == 13)m = m.substring(0, m.length-2)
-// 			else m = m.substring(0, m.length-1)
-// 			let s = m.substring(0,3)
-// 			if(!Number(s)){
-// 				console.log("paquet invalide en provenance du client "+nameorport(clsocket)+" recu. Contenu du paquet : "+m)
-// 			}else if (s==i) {
-// 				resolve(m.substring(7))
-// 				let index = clsocket._events.data.indexOf(fonction)
-// 				clsocket._events.data.splice(index, 1)
-// 			}
-// 		}
-// 		if(typeof clsocket._events.data == "function"){
-// 			clsocket._events.data = [clsocket._events.data]
-// 		}
-// 		clsocket._events.data.push(fonction)
-// 	})
-// }
-
-
-function handleRequest(socket, id, arg){
-    switch(arg[0]){
-		case "BungeeCord":case "Skyblock":case "EntaGames":case "Hub":
-			let cl = arg.shift()
-			clients[cl].write(id+arg.join(' ')+"\n")
-			responses[id] = (rep)=>{
-				socket.write(rep)
-			}
-			return
-		case "onlines":
-			clients["Hub"].write(id+"onlines "+pToN[socket.remotePort]+" "+arg[1]+"\n")
-			return
-		case "log":
-			if(clients[arg[1]]){
-				console.log("**Duplicate de connexion recue pour le client "+arg[1]+" !**")
-				console.log("L'ancienne connexion à été fermée pour être remplacée par la première")
-				delete pToN[clients[arg[1]].remotePort]
-				clients[arg[1]].end()
-			}else console.log("Client sur le port "+socket.remotePort+" connecté en tant que "+arg[1])
-			clients[arg[1]] = socket
-			pToN[socket.remotePort] = arg[1]
-			return
-        case "login":
-			if(logined[arg[1]])console.log("Duplicate de login recu pour le joueur "+arg[1])
-			else{
-				logined[arg[1]]=true
-				clients["BungeeCord"].write(id+"login "+arg[1]+"\n")
-			}
-			return
-		case "logout":
-			delete logined[arg[1]]
-			return
-		case "islogin":
-			if(logined[arg[1]])return 1
-			else return 0
-
-        case "vanish":
-			broadcast(id+"vanish "+arg[1]+" "+arg[2], socket.remotePort)
-			if(arg[1]=='1')vanishs[arg[2]] = true
-			else delete vanishs[arg[2]]
-			return
-		case "vanishs":
-			let b = ''
-			for(let i in vanishs){
-				b+=';'+i
-			}
-			return b.substring(1)
-		case "isvanish":
-			if(vanishs[arg[1]])return 1
-			else return 0
-		default:
-			return "_x"
-    }
-}
-
 function broadcast(request, exclude){
-	for(let i in clients){
-		if(clients[i].remotePort!=exclude) clients[i].write(request+"\n")
+	logger("Broadcasting "+request)
+	for(let i in sockData){
+		if(sockData[i].remotePort!=exclude){
+			sockData[i].write(request+"\n")
+			logger("broadcasting to "+nameorport(sockData[i].remotePort))
+		}
 	}
 }
