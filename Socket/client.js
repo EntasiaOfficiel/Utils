@@ -1,4 +1,5 @@
 const net = require('net')
+let name = "default"
 let socketC
 let listeners = []
 let firstsocket = false
@@ -29,7 +30,7 @@ function connect(){
 
 	socketC.on('connect', () => {
 		logger("Connecté au socket !")
-		socketC.write("log EBH\n")
+		socketC.write("log "+name+"\n")
 		firstsocket=true
 	})
 
