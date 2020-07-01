@@ -42,9 +42,7 @@ else:
 							print_info(serv, proc)
 
 				elif sys.argv[2] == "save":
-						proc = get_proc(serv, True)
-						if proc != None:
-							save_server(serv)
+					save_server(serv)
 						
 				else:
 					print("Commande inconnue !")

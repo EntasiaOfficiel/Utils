@@ -5,7 +5,7 @@ from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 maxram = 8594128896
 ramgo = 8
 
-file = open("data.txt", "r")
+file = open("ram.txt", "r")
 
 ax = plt.gca()
 x = []
