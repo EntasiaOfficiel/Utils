@@ -35,8 +35,7 @@ else:
 							targs = " ".join(targs)
 							if execute_cmd_mc(serv, targs):
 								print("Commande `"+targs+"` executée sur "+serv.name)
-
-				elif sys.argv[2] == "info":
+				elif sys.argv[2] == "stats":
 						proc = get_proc(serv, True)
 						if proc != None:
 							print_info(serv, proc)
