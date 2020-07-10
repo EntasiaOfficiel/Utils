@@ -20,7 +20,7 @@ data = []
 
 data.append(str(m))
 data.append(str(psutil.virtual_memory().used))
-cpu = psutil.cpu_percent(5)
+cpu = psutil.cpu_percent(10)
 data.append(str(cpu))
 file = open(f"{path}/{zero(now.month)}.{zero(now.day)}.txt", "a")
 file.write(" ".join(data)+"\n")
