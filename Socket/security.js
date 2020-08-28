@@ -26,12 +26,11 @@ function verifyMsg(msg, signature){
 }
 
 
-let msg = "log paper2"
+// let msg = "log paper2"
 // let signature = signMsg(msg)
-
-if(verifyMsg(msg, "Nbdf3X2qZb271kvHjBR/JKjN/rFS6hOyIZ+XoVDXvow=;60BA7BD825698697865C06FD940253E7")){
-    console.log("vérifié")
-}else console.log("invalidé")
+// if(verifyMsg(msg, "Nbdf3X2qZb271kvHjBR/JKjN/rFS6hOyIZ+XoVDXvow=;60BA7BD825698697865C06FD940253E7")){
+//     console.log("vérifié")
+// }else console.log("invalidé")
 
 
 module.exports = {signMsg, verifyMsg }
