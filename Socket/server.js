@@ -1,3 +1,5 @@
+const security = require('./security')
+
 function tconvert(x){
 	if(x.toString().length==1)return "0"+x
 	else return x
@@ -46,14 +48,20 @@ require('net').createServer(function (socket) {
 		if(m.charCodeAt(m.length-2) == 13)m = m.substring(0, m.length-2)
 		else if(m.charCodeAt(m.length-1) == 10) m=m.substring(0, m.length-1)
 		for(let i of m.split("\n")){
-			logger("Paquet de "+nameorport(socket.remotePort)+" : "+i)
 			socket.emit('line', i)
 		}
 	
 	})
 
-	socket.on('line', function (m) {
-		let args = m.split(" ")
+	socket.on('line', function (msg) {
+		let args = msg.split(" ")
+		let signature = args.shift()
+		logger("Paquet de "+nameorport(socket.remotePort)+" : "+msg)
+		if(!security.verifyMsg(args.join(" "), signature)){
+			logger("Signature invalide provenant du dernier packet !")
+			socket.end()
+			return
+		}
 		
 		let type = args.shift()
 		if(type=="log"){
@@ -66,7 +74,7 @@ require('net').createServer(function (socket) {
 			logger("Client sur le port "+socket.remotePort+" connecté en tant que "+args[0])
 			socket.name = args[0]
 			sockData[socket.remotePort] = socket
-		}else if(socket.name==undefined)logger("Paquet recu pour un serveur non authentifié !", socket, m)
+		}else if(socket.name==undefined)logger("Paquet recu pour un serveur non authentifié !", socket, msg)
 		else{
 			let t = getByName(type)
 			if(t)t.write(args.join(' ')+"\n")
@@ -87,7 +95,7 @@ require('net').createServer(function (socket) {
 						return broadcast(args.join(' '), socket.remotePort)
 					}
 					default:{
-						logger("Packet non reconnu", socket, m)
+						logger("Packet non reconnu", socket, msg)
 					}
 				}
 			}
