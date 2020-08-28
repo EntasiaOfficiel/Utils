@@ -1,4 +1,5 @@
 const security = require('./security')
+const pass = require("./pass")
 
 function tconvert(x){
 	if(x.toString().length==1)return "0"+x
@@ -116,7 +117,7 @@ require('net').createServer(function (socket) {
 
 
 
-}).listen(23461, "127.0.0.1", () => {
+}).listen(pass.port, "127.0.0.1", () => {
 	logger('Serveur lancé')
 })
 

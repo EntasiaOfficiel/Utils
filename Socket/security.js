@@ -1,6 +1,6 @@
 const JsSHA = require('jssha')
 const crypto = require('crypto')
-const secret = require("./pass")
+const pass = require("./pass")
 
 function signMsg(msg, hexSalt){
     if(!hexSalt){
@@ -9,7 +9,7 @@ function signMsg(msg, hexSalt){
 
     let digest = new JsSHA("SHA-256", "TEXT", { encoding: "UTF8" })
 
-    digest.update(secret)
+    digest.update(pass.secret)
     digest.update(hexSalt)
     digest.update(msg)
     
