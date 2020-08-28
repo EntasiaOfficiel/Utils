@@ -23,7 +23,7 @@ function softGetByName(name){
 	if(a)return a
 	else{
 		a = new Object()
-		a.write = ()=>{}
+		a.sendData = ()=>{}
 		return a
 	}
 }
@@ -43,6 +43,12 @@ function nameorport(s){
 require('net').createServer(function (socket) {
 	
 	logger("New client on port "+socket.remotePort)
+
+	socket.sendData = (str)=>{
+		let signature = security.signMsg(str)
+		let final = signature+" "+str+"\n"
+		socket.write(final)
+	}
 
 	socket.on('data', function (data) {
 		let m = data.toString()
@@ -78,17 +84,17 @@ require('net').createServer(function (socket) {
 		}else if(socket.name==undefined)logger("Paquet recu pour un serveur non authentifié !", socket, msg)
 		else{
 			let t = getByName(type)
-			if(t)t.write(args.join(' ')+"\n")
+			if(t)t.sendData(args.join(' '))
 			else{
 				switch(type){
 					case "onlines":{
-						softGetByName("Hub").write("onlines "+socket.name+" "+args[0]+"\n")
-						softGetByName("EBH").write("onlines "+socket.name+" "+args[0]+"\n")
+						softGetByName("Hub").sendData("onlines "+socket.name+" "+args[0])
+						softGetByName("EBH").sendData("onlines "+socket.name+" "+args[0])
 						return
 					}
 					case "players":{
-						softGetByName("Hub").write("players "+args.join(" ")+"\n")
-						softGetByName("EBH").write("players "+args.join(" ")+"\n")
+						softGetByName("Hub").sendData("players "+args.join(" "))
+						softGetByName("EBH").sendData("players "+args.join(" "))
 						// TODO PASSER AU BOT DISCORD ET AU WEBSOCKET DEDIE
 						return
 					}
@@ -96,7 +102,7 @@ require('net').createServer(function (socket) {
 						return broadcast(args.join(' '), socket.remotePort)
 					}
 					default:{
-						logger("Packet non reconnu", socket, msg)
+						logger("Packet non reconnu (type "+type+")", socket, msg)
 					}
 				}
 			}
@@ -126,7 +132,7 @@ function broadcast(request, exclude){
 	logger("Broadcasting "+request)
 	for(let i in sockData){
 		if(sockData[i].remotePort!=exclude){
-			sockData[i].write(request+"\n")
+			sockData[i].sendData(request)
 			logger("broadcasting to "+nameorport(sockData[i].remotePort))
 		}
 	}
