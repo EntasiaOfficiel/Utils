@@ -1,5 +1,5 @@
 const security = require('./security')
-const pass = require("./pass")
+const infos = require("entasia/pass").socket
 
 function tconvert(x){
 	if(x.toString().length==1)return "0"+x
@@ -88,14 +88,11 @@ require('net').createServer(function (socket) {
 			else{
 				switch(type){
 					case "onlines":{
-						softGetByName("Hub").sendData("onlines "+socket.name+" "+args[0])
-						softGetByName("EBH").sendData("onlines "+socket.name+" "+args[0])
+						sendOnlineRequest("onlines "+socket.name+" "+args[0])
 						return
 					}
 					case "players":{
-						softGetByName("Hub").sendData("players "+args.join(" "))
-						softGetByName("EBH").sendData("players "+args.join(" "))
-						// TODO PASSER AU BOT DISCORD ET AU WEBSOCKET DEDIE
+						sendOnlineRequest("players "+args.join(" "))
 						return
 					}
 					case "broadcast":{
@@ -103,6 +100,7 @@ require('net').createServer(function (socket) {
 					}
 					default:{
 						logger("Packet non reconnu (type "+type+")", socket, msg)
+						return
 					}
 				}
 			}
@@ -112,21 +110,32 @@ require('net').createServer(function (socket) {
 
 	socket.on('end', function (){
 		logger("Client "+nameorport(socket.remotePort)+" déconnecté")
-		delete sockData[socket.remotePort]
+		socket.emit("off")
 	})
 	
 
 	socket.on('error', function (e) {
 		logger("Client "+nameorport(socket.remotePort)+" déconnecté avec erreur : "+e.message)
+		socket.emit("off")
+	})
+	
+
+	socket.on('off', () => {
 		delete sockData[socket.remotePort]
+		sendOnlineRequest("onlines "+socket.name+" 0")
 	})
 
 
 
-}).listen(pass.port, "127.0.0.1", () => {
+}).listen(infos.port, "127.0.0.1", () => {
 	logger('Serveur lancé')
 })
 
+function sendOnlineRequest(r){
+	for(let i of ["Hub", "EBH", "Public"]){
+		softGetByName(i).sendData(r)
+	}
+}
 
 function broadcast(request, exclude){
 	logger("Broadcasting "+request)
